@@ -1,0 +1,2 @@
+include:
+  - remote: 'https://terraform-modules-full360.s3.amazonaws.com/public/tooling/gitlab-ci-template.yml'

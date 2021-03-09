@@ -1,0 +1,366 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ElasticDW access template.
+Parameters:
+  ClientId:
+    Type: String
+    Description: ElasticDW account ID.
+  EDWPrincipalAWSAcctId:
+    Type: String
+    Description: ElasticDW Principal Account
+  EDWPrefix:
+    Type: String
+    Default: "edw"
+    Description: Prefix used in names for ElasticDW resources
+  TagPrefix:
+    Type: String
+    Default: "edw"
+    Description: Prefix used in tags for ElasticDW resources
+  BackupBucket:
+    Type: String
+    Description: Bucket used for Backups.
+  EonBucket:
+    Type: String
+    Description: Bucket used for Eon data
+  KmsKey:
+    Type: String
+    Description: Kms key used for encryption.
+  InstanceProfileName:
+    Type: String
+    Description: Instance Profile arn used by Instances.
+  InstanceRole:
+    Type: String
+    Description: Role arn used by instances.
+  SecurityGroup:
+    Type: String
+    Description: Security Group Id used by Instances.
+Resources:
+  EdwRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EDWPrefix}-access-${ClientId}"
+      Description: !Sub "ElasticDW Access Role for Client ${ClientId}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS:
+            - !Sub "arn:aws:iam::${EDWPrincipalAWSAcctId}:root"
+          Action:
+          - "sts:AssumeRole"
+          Condition:
+            StringEquals:
+              sts:ExternalId: !Sub "${ClientId}"
+      Path: !Sub "/${EDWPrefix}/"
+      Policies:
+        - PolicyName: !Sub "${EDWPrefix}-autoscaling"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - autoscaling:Describe*
+              Resource: "*"
+            - Effect: Allow
+              Action:
+              - autoscaling:AttachInstances
+              - autoscaling:AttachLoadBalancers
+              - autoscaling:AttachLoadBalancerTargetGroups
+              - autoscaling:CompleteLifecycleAction
+              - autoscaling:CreateAutoScalingGroup
+              - autoscaling:CreateLaunchConfiguration
+              - autoscaling:CreateOrUpdateTags
+              - autoscaling:DeleteAutoScalingGroup
+              - autoscaling:DeleteLaunchConfiguration
+              - autoscaling:DeleteLifecycleHook
+              - autoscaling:DeleteNotificationConfiguration
+              - autoscaling:DeleteTags
+              - autoscaling:DetachInstances
+              - autoscaling:DetachLoadBalancers
+              - autoscaling:DetachLoadBalancerTargetGroups
+              - autoscaling:DisableMetricsCollection
+              - autoscaling:EnableMetricsCollection
+              - autoscaling:PutLifecycleHook
+              - autoscaling:PutNotificationConfiguration
+              - autoscaling:RecordLifecycleActionHeartbeat
+              - autoscaling:SetDesiredCapacity
+              - autoscaling:SetInstanceHealth
+              - autoscaling:SetInstanceProtection
+              - autoscaling:SuspendProcesses
+              - autoscaling:TerminateInstanceInAutoScalingGroup
+              - autoscaling:UpdateAutoScalingGroup
+              - autoscaling:ResumeProcesses
+              - autoscaling:PutScheduledUpdateGroupAction
+              - autoscaling:DeleteScheduledAction
+              Resource:
+              - !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:launchConfiguration:*:launchConfigurationName/${EDWPrefix}*
+              - !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${EDWPrefix}*
+        - PolicyName: "edw-cloudformation"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - cloudformation:CreateStack
+              - cloudformation:UpdateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:DescribeStackEvents
+              - cloudformation:GetTemplate
+              Resource:
+              - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${EDWPrefix}-*
+        - PolicyName: "edw-cloudwatch-dashboard"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - cloudwatch:DeleteDashboards
+              - cloudwatch:GetDashboard
+              - cloudwatch:PutDashboard
+              Resource:
+              - !Sub arn:aws:cloudwatch::${AWS::AccountId}:dashboard/${EDWPrefix}-*
+        - PolicyName: "edw-ec2"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - ec2:CreatePlacementGroup*
+              - ec2:CreateVolume
+              - ec2:DeletePlacementGroup
+              - ec2:Describe*
+              - ec2:ImportKeyPair
+              - ec2:ModifyInstanceAttribute
+              - ec2:ModifyVolumeAttribute
+              - ec2:RunInstances
+              - tag:Get*
+              Resource: "*"
+              Condition:
+                ForAllValues:StringLike:
+                  aws:TagKeys: [!Sub "${TagPrefix}:*", "edw:managed", "prefix"] 
+            - Effect: Allow
+              Action:
+              - ec2:AttachVolume
+              - ec2:DeleteVolume
+              - ec2:DetachVolume
+              - ec2:RebootInstances
+              - ec2:StartInstances
+              - ec2:StopInstances
+              - ec2:TerminateInstances
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  aws:RequestTag/edw:managed: true
+                StringLike:
+                  aws:RequestTag/aws:autoscaling:groupName: !Sub '${EDWPrefix}*'
+            - Effect: Allow
+              Action:
+              - ec2:DeleteKeyPair
+              Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/${EDWPrefix}-*'
+            - Effect: Allow
+              Action:
+              - ec2:CreateTags
+              - tag:tagResources
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  aws:RequestTag/edw:managed: true
+                StringLike:
+                  aws:RequestTag/aws:autoscaling:groupName: !Sub '${EDWPrefix}*'
+            - Effect: Allow
+              Action:
+              - ec2:CreateTags
+              - tag:tagResources
+              Resource: "*"
+              Condition:
+                ForAllValues:StringLike:
+                  aws:TagKeys: [!Sub "${TagPrefix}:*", "edw:managed", "prefix"] 
+            - Effect: Allow
+              Action:
+              - ec2:CreateTags
+              Resource:
+              - !Sub arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+              - !Sub arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*
+        - PolicyName: "edw-access"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - ec2:AuthorizeSecurityGroupEgress
+                - ec2:AuthorizeSecurityGroupIngress
+                - ec2:RevokeSecurityGroupEgress
+                - ec2:RevokeSecurityGroupIngress
+                Resource:
+                - !Sub arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/"${SecurityGroup}"
+              - Effect: Allow
+                Action:
+                - kms:UpdateAlias
+                - kms:Decrypt
+                - kms:Encrypt
+                - kms:GenerateDataKey
+                - kms:GetKeyPolicy
+                - kms:GetKeyRotationStatus
+                - kms:DescribeKey
+                Resource: !Sub "${KmsKey}"
+              - Effect: Allow
+                Action:
+                - kms:CreateAlias
+                - kms:CreateAliasKey
+                - kms:TagResource
+                - kms:ListResourceTags
+                - kms:DeleteAlias
+                - kms:ListAliases
+                Resource: !Sub "${KmsKey}"
+        - PolicyName: "edw-loadbalancing"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - elasticloadbalancing:Describe*
+              Resource: "*"
+            - Effect: Allow
+              Action:
+              - elasticloadbalancing:AddTags
+              - tag:tagResources
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  aws:RequestTag/edw:managed: true
+                StringLike:
+                  aws:RequestTag/aws:autoscaling:groupName: !Sub '${EDWPrefix}*'
+            - Effect: Allow
+              Action:
+              - tag:tagResources
+              - elasticloadbalancing:AddTags
+              Resource: "*"
+              Condition:
+                ForAllValues:StringLike:
+                  aws:TagKeys: [!Sub "${TagPrefix}:*", "edw:managed", "prefix"]  
+            - Effect: Allow
+              Action:
+              - elasticloadbalancing:AddListenerCertificates
+              - elasticloadbalancing:CreateListener
+              - elasticloadbalancing:DeleteListener
+              - elasticloadbalancing:ModifyListener
+              - elasticloadbalancing:RemoveListenerCertificates
+              Resource: !Sub arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:listener/*/${EDWPrefix}-*
+            - Effect: Allow
+              Action:
+              - elasticloadbalancing:CreateListener
+              - elasticloadbalancing:CreateLoadBalancer
+              - elasticloadbalancing:DeleteListener
+              - elasticloadbalancing:DeleteLoadBalancer
+              - elasticloadbalancing:ModifyListener
+              - elasticloadbalancing:ModifyLoadBalancerAttributes
+              Resource: !Sub arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:loadbalancer/*/${EDWPrefix}-*
+            - Effect: Allow
+              Action:
+              - elasticloadbalancing:CreateTargetGroup
+              - elasticloadbalancing:DeleteTargetGroup
+              - elasticloadbalancing:DeregisterTargets
+              - elasticloadbalancing:ModifyTargetGroup
+              - elasticloadbalancing:RegisterTargets
+              Resource: !Sub arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:targetgroup/${EDWPrefix}-*
+        - PolicyName: "edw-cloudwatchevents"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - events:DescribeRule
+              Resource: "*"
+            - Effect: Allow
+              Action:
+              - events:DeleteRule
+              - events:ListTagsForResource
+              - events:ListTargetsByRule
+              - events:PutRule
+              - events:PutTargets
+              - events:RemoveTargets
+              - events:TagResource
+              Resource:
+              - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/${EDWPrefix}-*
+        - PolicyName: "edw-iam"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - iam:AddRoleToInstanceProfile
+              - iam:GetInstanceProfile
+              - iam:GetRole
+              - iam:PassRole
+              - iam:ListInstanceProfilesForRole
+              - iam:TagRole
+              Resource:
+              - !Sub "${InstanceRole}"
+              - !Sub "${InstanceProfileName}"
+        - PolicyName: "edw-passrole"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - iam:PassRole
+              Resource:
+              - !Sub "${InstanceRole}"
+        - PolicyName: "edw-s3-eon"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:GetAccelerateConfiguration
+              - s3:GetBucket*
+              - s3:GetEncryptionConfiguration
+              - s3:GetLifecycleConfiguration
+              - s3:GetReplicationConfiguration
+              - s3:ListBucket
+              - s3:ListObjectVersions
+              - s3:PutBucketTagging
+              Resource:
+              - !Sub "${BackupBucket}"
+              - !Sub "${EonBucket}"
+        - PolicyName: "edw-ssm"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+              - ssm:DescribeDocumentPermission
+              - ssm:DescribeParameters
+              - ssm:ListTagsForResource
+              Resource: "*"
+            - Effect: Allow
+              Action:
+              - ssm:AddTagsToResource
+              - ssm:DescribeDocument
+              - ssm:GetDocument
+              - ssm:GetParameters
+              - ssm:CreateDocument
+              - ssm:DeleteDocument
+              - ssm:UpdateDocument
+              - ssm:DeleteParameter
+              - ssm:GetParameter
+              - ssm:PutParameter
+              Resource:
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:document/${EDWPrefix}-*
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-dbadmin-password
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-license
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-retain-any-backup-for-how-many-days
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-retain-daily-backup-for-how-many-days
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-retain-weekly-backup-for-how-many-days
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ssh-key-dbadmin-private
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ssh-key-dbadmin-public
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ssh-key-root-private
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ssh-key-root-public
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-vertica-seconday-admin-password
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-vertika-configuration
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-scale-in-protection
+Outputs:
+  EdwRoleARN:
+    Description: The ARN of the ElasticDW access role
+    Value: !GetAtt EdwRole.Arn

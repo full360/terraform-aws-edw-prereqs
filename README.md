@@ -125,7 +125,6 @@ Review and prepare requirements:
 6. You also need to check in your accounts CloudFormation for the stack recently created by the module called edw-access-${client_id} for the ARN of the role created in that stack (The reason why this is a CloudFormation stack is to keep it consistent with how the role is maintained across multiple clients, and used)
 
 # Docs
-
 ## Requirements
 
 | Name | Version |
@@ -159,8 +158,9 @@ Review and prepare requirements:
 | asg\_ingress\_rules | List of ingress rules to create by name | `list(string)` | `[]` | no |
 | asg\_ingress\_with\_cidr\_blocks | Default security group rules for Vertica | `list(map(any))` | <pre>[<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "spread ports",<br>    "from_port": 4803,<br>    "protocol": "tcp",<br>    "to_port": 4803<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "dns",<br>    "from_port": 53,<br>    "protocol": "tcp",<br>    "to_port": 53<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "vsql/sql",<br>    "from_port": 5433,<br>    "protocol": "tcp",<br>    "to_port": 5434<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "inter node comms",<br>    "from_port": 14159,<br>    "protocol": "tcp",<br>    "to_port": 14161<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "Vertica Management Console",<br>    "from_port": 5444,<br>    "protocol": "tcp",<br>    "to_port": 5444<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "Vertica Management Console",<br>    "from_port": 5450,<br>    "protocol": "tcp",<br>    "to_port": 5450<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "Spread",<br>    "from_port": 6543,<br>    "protocol": "tcp",<br>    "to_port": 6543<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "rsync",<br>    "from_port": 50000,<br>    "protocol": "tcp",<br>    "to_port": 50000<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "SSH ports",<br>    "from_port": 22,<br>    "protocol": "tcp",<br>    "to_port": 22<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "spread ports",<br>    "from_port": 4803,<br>    "protocol": "udp",<br>    "to_port": 4804<br>  },<br>  {<br>    "cidr_blocks": "0.0.0.0/0",<br>    "description": "inter node comms",<br>    "from_port": 14159,<br>    "protocol": "udp",<br>    "to_port": 14161<br>  }<br>]</pre> | no |
 | asg\_ingress\_with\_self | List of ingress rules to create where 'self' is defined | `list(map(string))` | `[]` | no |
-| client\_id | EDW access Client ID | `any` | n/a | yes |
+| client\_id | EDW access Client ID, available on the ElasticDW UI > Settings | `any` | n/a | yes |
 | default\_sg\_ingress\_cidr\_blocks | Default CIDR block for sg ingress rules | `string` | `"0.0.0.0/0"` | no |
+| edw\_principal\_account\_number | The ElasticDW principal account number, available on the ElasticDW UI > Settings | `any` | n/a | yes |
 | environment | The environment name | `string` | n/a | yes |
 | prefix | The prefix | `string` | n/a | yes |
 | region | AWS Region where the resources will be created | `any` | n/a | yes |
