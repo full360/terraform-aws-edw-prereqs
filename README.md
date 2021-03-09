@@ -59,7 +59,7 @@ Review and prepare requirements:
     }
 
     module "edw_resources" {
-      source                                 = "https://github.com/full360/terraform-aws-edw-prereqs?ref=v0.1.0"
+      source                                 = "https://github.com/full360/terraform-aws-edw-prereqs?ref=master"
       environment = var.environment
       prefix = var.prefix
       region  = var.region
