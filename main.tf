@@ -244,15 +244,16 @@ resource "aws_cloudformation_stack" "edw_access" {
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
 
   parameters = {
-    ClientId            = var.client_id
-    InstanceProfileName = aws_iam_instance_profile.vertica_instance_profile.arn
-    BackupBucket        = module.backup_bucket.this_s3_bucket_arn
-    EonBucket           = module.eon_bucket.this_s3_bucket_arn
-    InstanceRole        = aws_iam_role.vertica_instance_role.arn
-    KmsKey              = aws_kms_key.vertica_kms_key.arn
-    EDWPrefix           = local.resource_prefix
-    TagPrefix           = var.prefix
-    SecurityGroup       = module.asg_sg.this_security_group_id
+    ClientId              = var.client_id
+    EDWPrincipalAWSAcctId = var.client_id
+    InstanceProfileName   = aws_iam_instance_profile.vertica_instance_profile.arn
+    BackupBucket          = module.backup_bucket.this_s3_bucket_arn
+    EonBucket             = module.eon_bucket.this_s3_bucket_arn
+    InstanceRole          = aws_iam_role.vertica_instance_role.arn
+    KmsKey                = aws_kms_key.vertica_kms_key.arn
+    EDWPrefix             = local.resource_prefix
+    TagPrefix             = var.prefix
+    SecurityGroup         = module.asg_sg.this_security_group_id
   }
 
   template_body = file("${path.module}/templates/role_template.yml")
