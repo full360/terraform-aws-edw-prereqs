@@ -245,7 +245,6 @@ resource "aws_cloudformation_stack" "edw_access" {
 
   parameters = {
     ClientId              = var.client_id
-    EDWPrincipalAWSAcctId = var.client_id
     InstanceProfileName   = aws_iam_instance_profile.vertica_instance_profile.arn
     BackupBucket          = module.backup_bucket.this_s3_bucket_arn
     EonBucket             = module.eon_bucket.this_s3_bucket_arn
@@ -254,6 +253,7 @@ resource "aws_cloudformation_stack" "edw_access" {
     EDWPrefix             = local.resource_prefix
     TagPrefix             = var.prefix
     SecurityGroup         = module.asg_sg.this_security_group_id
+    EDWPrincipalAWSAcctId = var.edw_principal_account_number
   }
 
   template_body = file("${path.module}/templates/role_template.yml")
