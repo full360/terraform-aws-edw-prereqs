@@ -118,7 +118,7 @@ Review and prepare requirements:
 
     prefix = "vertica"
 
-    client_id = "34A8D475-A10A-4056-B4C1-D5985A110A09"
+    client_id = "XXXXXXX"
 
     remote_logger = "arn:aws:iam::123456789:role/edw-remote-logger"
 
