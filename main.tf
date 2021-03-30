@@ -6,10 +6,6 @@ locals {
   kms_description    = "${local.resource_prefix}-kms-key"
 }
 
-provider "aws" {
-  version = "~> 3"
-  region  = var.region
-}
 
 data "aws_caller_identity" "current" {
 }
@@ -70,22 +66,32 @@ data "aws_iam_policy_document" "secure_access_eon" {
 
 module "backup_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "v1.17.0"
+  version = "v1.9.0"
 
+  create_bucket = var.create_backup_bucket
   bucket        = local.backup_bucket_name
-  acl           = "log-delivery-write"
+  acl           = "private"
   tags          = var.tags
   attach_policy = true
 
   # Protect the data vendor bucket from being erased if there's content in the
   # bucket.
-  force_destroy = false
+  force_destroy = var.force_destroy
 
   # Block public access
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm     = var.sse_algorithm
+        kms_master_key_id = var.sse_kms_master_key_id
+      }
+    }
+  }
 
   policy = data.aws_iam_policy_document.secure_access_backup.json
 
@@ -111,22 +117,33 @@ module "backup_bucket" {
 
 module "eon_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "v1.17.0"
+  version = "v1.9.0"
 
+  create_bucket = var.create_eon_bucket
   bucket        = local.eon_bucket_name
-  acl           = "log-delivery-write"
+  acl           = "private"
   tags          = var.tags
   attach_policy = true
 
   # Protect the data vendor bucket from being erased if there's content in the
   # bucket.
-  force_destroy = false
+  force_destroy = var.force_destroy
 
   # Block public access
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm     = var.sse_algorithm
+        kms_master_key_id = var.sse_kms_master_key_id
+      }
+    }
+  }
+
 
   policy = data.aws_iam_policy_document.secure_access_eon.json
 }
@@ -136,6 +153,7 @@ module "asg_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.6"
 
+  create      = var.create_security_group
   name        = local.sg_name
   description = "Security Group for ${local.resource_prefix}"
   tags        = var.tags
@@ -154,6 +172,7 @@ module "asg_sg" {
 
 
 resource "aws_kms_key" "vertica_kms_key" {
+  count                   = var.create_kms_key ? 1 : 0
   description             = local.kms_description
   deletion_window_in_days = 7
   tags                    = var.tags
@@ -161,6 +180,7 @@ resource "aws_kms_key" "vertica_kms_key" {
 
 
 data "template_file" "vertica_instance_role_tpl" {
+  count    = var.create_instance_role ? 1 : 0
   template = file("${path.module}/templates/vertica-instance-role.tpl")
 
   vars = {
@@ -168,15 +188,17 @@ data "template_file" "vertica_instance_role_tpl" {
     edw_principal_account_number   = var.edw_principal_account_number
     standard_resource_name         = "${local.resource_prefix}-*"
     prefix                         = var.prefix
-    additional_remote_role_arn     = aws_iam_role.vertica_instance_role.arn
-    vertica_kms_key_id             = aws_kms_key.vertica_kms_key.id
+    additional_remote_role_arn     = aws_iam_role.vertica_instance_role[0].arn
+    vertica_kms_key_id             = aws_kms_key.vertica_kms_key[0].id
     vertica_kms_alias              = ""
     backup_s3_location             = local.backup_bucket_name
     sns_topic_arn                  = var.sns_topic_arn
-    cw_system_log_remote_role_arn  = aws_iam_role.vertica_instance_role.arn
-    cw_vertica_log_remote_role_arn = aws_iam_role.vertica_instance_role.arn
+    cw_system_log_remote_role_arn  = aws_iam_role.vertica_instance_role[0].arn
+    cw_vertica_log_remote_role_arn = aws_iam_role.vertica_instance_role[0].arn
     eon_s3_location                = local.eon_bucket_name
     ssm_document_arn               = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:document/${var.prefix}-*"
+    region                         = var.region
+    remote_logger                  = var.remote_logger
   }
 }
 
@@ -184,14 +206,16 @@ data "template_file" "vertica_instance_role_tpl" {
 # Attaching the policy File to the Role
 #=======================================#
 resource "aws_iam_policy" "vertica_instance_policy" {
+  count  = var.create_instance_role ? 1 : 0
   name   = "${local.resource_prefix}-instance-policy"
-  policy = data.template_file.vertica_instance_role_tpl.rendered
+  policy = data.template_file.vertica_instance_role_tpl[0].rendered
 }
 
 
 # Create Instance role
 #==========================#
 resource "aws_iam_role" "vertica_instance_role" {
+  count       = var.create_instance_role ? 1 : 0
   name        = "${local.resource_prefix}-instance-role"
   path        = var.role_path
   description = "Role to be Assumed by EC2 Instances"
@@ -221,17 +245,19 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "vertica_instance_role_policy_attach-1" {
+  count      = var.create_instance_role ? 1 : 0
   name       = "${local.resource_prefix}-instance-role-policy-attach"
-  roles      = [aws_iam_role.vertica_instance_role.name]
-  policy_arn = aws_iam_policy.vertica_instance_policy.arn
+  roles      = [aws_iam_role.vertica_instance_role[0].name]
+  policy_arn = aws_iam_policy.vertica_instance_policy[0].arn
 }
 
 
 # Create a Instance Profile with the above Created role
 #========================================================#
 resource "aws_iam_instance_profile" "vertica_instance_profile" {
+  count       = var.create_instance_role ? 1 : 0
   name_prefix = local.resource_prefix
-  role        = aws_iam_role.vertica_instance_role.name
+  role        = aws_iam_role.vertica_instance_role[0].name
 }
 
 
@@ -239,20 +265,22 @@ resource "aws_iam_instance_profile" "vertica_instance_profile" {
 # ======================
 
 resource "aws_cloudformation_stack" "edw_access" {
-  name = "edw-access-${var.client_id}"
+  count = var.create_access_role ? 1 : 0
+  name  = "edw-access-${var.client_id}"
 
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
 
   parameters = {
-    ClientId            = var.client_id
-    InstanceProfileName = aws_iam_instance_profile.vertica_instance_profile.arn
-    BackupBucket        = module.backup_bucket.this_s3_bucket_arn
-    EonBucket           = module.eon_bucket.this_s3_bucket_arn
-    InstanceRole        = aws_iam_role.vertica_instance_role.arn
-    KmsKey              = aws_kms_key.vertica_kms_key.arn
-    EDWPrefix           = local.resource_prefix
-    TagPrefix           = var.prefix
-    SecurityGroup       = module.asg_sg.this_security_group_id
+    ClientId              = var.client_id
+    InstanceProfileName   = aws_iam_instance_profile.vertica_instance_profile[0].arn
+    BackupBucket          = module.backup_bucket.this_s3_bucket_arn
+    EonBucket             = module.eon_bucket.this_s3_bucket_arn
+    InstanceRole          = aws_iam_role.vertica_instance_role[0].arn
+    KmsKey                = aws_kms_key.vertica_kms_key[0].arn
+    EDWPrefix             = local.resource_prefix
+    TagPrefix             = var.prefix
+    SecurityGroup         = module.asg_sg.this_security_group_id
+    EDWPrincipalAWSAcctId = var.edw_principal_account_number
   }
 
   template_body = file("${path.module}/templates/role_template.yml")

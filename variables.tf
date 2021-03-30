@@ -31,6 +31,52 @@ variable "sns_topic_arn" {
   description = "SNS for EDW"
 }
 
+variable "remote_logger" {
+  description = "EDWs remote logger"
+}
+
+variable "create_backup_bucket" {
+  description = "Eable creation of backup bucket"
+  default     = true
+  type        = bool
+}
+
+variable "create_eon_bucket" {
+  description = "Enable creation of eon bucket"
+  default     = true
+  type        = bool
+}
+
+variable "create_kms_key" {
+  description = "Enable creation of kms key"
+  default     = true
+  type        = bool
+}
+
+variable "create_access_role" {
+  description = "Enable creation of access role"
+  default     = true
+  type        = bool
+}
+
+variable "create_instance_role" {
+  description = "Enable creation of instance role"
+  default     = true
+  type        = bool
+}
+
+variable "create_security_group" {
+  description = "Enable creation of security group"
+  default     = true
+  type        = bool
+}
+
+variable "force_destroy" {
+  description = "Force destroy buckets"
+  default     = false
+  type        = bool
+}
+
 ###SG
 
 variable "alb_ingress_rules" {
@@ -217,6 +263,19 @@ variable "role_path" {
   description = "path specified on role creation"
   default     = "/"
 }
+
+variable "sse_algorithm" {
+  description = "Type of Server Side Encryption algorithm"
+  type        = string
+  default     = "AES256"
+}
+
+variable "sse_kms_master_key_id" {
+  description = "ID of the KMS Master key for Server Side Encryption"
+  type        = string
+  default     = null
+}
+
 
 #######################
 
