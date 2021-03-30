@@ -14,6 +14,13 @@ The module to use should be provided by Full360. The module will create resource
 Variables for customization are available. Please check [variables.tf](variables.tf) in this module
 
 
+## Notes on the policies
+
+* Amazon Message Delivery Service does not support specifying a resource ARN in the Resource element of an IAM policy statement. To allow access to Amazon Message Delivery Service, specify "Resource": "*" in your policy.  (https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonmessagedeliveryservice.html)
+
+* Cloudwatch logs groups are not resources managed by EDW so they get created as soon as logs are sent to CloudWatch, because of this the log groups do not have tags, and the naming of the groups depends on random ids generated on cluster creation, which makes it dificult to scope the policy. That is why the policy only allows for create and put logs. It does not allow deletion.
+
+
 ## How to use the module
 
 ### Requirements
@@ -52,10 +59,17 @@ Review and prepare requirements:
       description = "Prefix for resources (ej:edw/foo)"
     }
 
+    variable "remote_logger" {
+      description = "edw remote logger"
+    }
+
+    variable "edw_principal_account_number" {
+      description = "edw main account"
+    }
+
     provider "aws" {
       version = "~> 3.0"
       region  = var.region
-      profile = "playground"
     }
 
     module "edw_resources" {
@@ -66,9 +80,11 @@ Review and prepare requirements:
       client_id = var.client_id
       vpc_id = var.vpc_id
       tags = {
-        "foo" = "bar"
+        "key1" = "value1"
       }
       sns_topic_arn = var.sns_topic_arn
+      remote_logger = var.remote_logger
+      edw_principal_account_number = var.edw_principal_account_number
     }
 
     # outputs
@@ -101,6 +117,12 @@ Review and prepare requirements:
     environment = "dev"
 
     prefix = "vertica"
+
+    client_id = "34A8D475-A10A-4056-B4C1-D5985A110A09"
+
+    remote_logger = "arn:aws:iam::123456789:role/edw-remote-logger"
+
+    edw_principal_account_number = "123456789"
     ```
 
 3. Create the resources applying the terraform script 
@@ -125,12 +147,6 @@ Review and prepare requirements:
 6. You also need to check in your accounts CloudFormation for the stack recently created by the module called edw-access-${client_id} for the ARN of the role created in that stack (The reason why this is a CloudFormation stack is to keep it consistent with how the role is maintained across multiple clients, and used)
 
 # Docs
-## Requirements
-
-| Name | Version |
-|------|---------|
-| aws | ~> 3 |
-
 ## Providers
 
 | Name | Version |
@@ -141,7 +157,7 @@ Review and prepare requirements:
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+|------|-------------|------|---------|:-----:|
 | alb\_egress\_cidr\_blocks | List of IPv4 CIDR ranges to use on all egress rules | `list(string)` | <pre>[<br>  "0.0.0.0/0"<br>]</pre> | no |
 | alb\_egress\_rules | List of egress rules to create by name | `list(string)` | `[]` | no |
 | alb\_egress\_with\_cidr\_blocks | List of egress rules to create where 'cidr\_blocks' is used | `list(map(string))` | `[]` | no |
@@ -164,6 +180,7 @@ Review and prepare requirements:
 | environment | The environment name | `string` | n/a | yes |
 | prefix | The prefix | `string` | n/a | yes |
 | region | AWS Region where the resources will be created | `any` | n/a | yes |
+| remote\_logger | EDWs remote logger | `any` | n/a | yes |
 | role\_path | path specified on role creation | `string` | `"/"` | no |
 | sns\_topic\_arn | SNS for EDW | `any` | n/a | yes |
 | tags | tags to be applied to the resources created | `map(string)` | n/a | yes |

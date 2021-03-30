@@ -1,11 +1,11 @@
 output "kms_id" {
   description = "kms id"
-  value       = aws_kms_key.vertica_kms_key.id
+  value       = concat(aws_kms_key.vertica_kms_key.*.id, [""])[0]
 }
 
 output "kms_arn" {
   description = "kms arn"
-  value       = aws_kms_key.vertica_kms_key.arn
+  value       = concat(aws_kms_key.vertica_kms_key.*.arn, [""])[0]
 }
 
 
@@ -29,14 +29,24 @@ output "eon_bucket_arn" {
   value       = module.eon_bucket.this_s3_bucket_arn
 }
 
-output "instance_role_name" {
-  description = "instance profile"
-  value       = aws_iam_instance_profile.vertica_instance_profile
+output "instance_profile_arn" {
+  description = "instance profile arn"
+  value       = concat(aws_iam_instance_profile.vertica_instance_profile.*.arn, [""])[0]
+}
+
+output "instance_profile_name" {
+  description = "instance profile name"
+  value       = concat(aws_iam_instance_profile.vertica_instance_profile.*.name, [""])[0]
 }
 
 output "instance_role_arn" {
-  description = "instance role"
-  value       = aws_iam_role.vertica_instance_role
+  description = "instance role arn"
+  value       = concat(aws_iam_role.vertica_instance_role.*.arn, [""])[0]
+}
+
+output "instance_role_name" {
+  description = "instance role name"
+  value       = concat(aws_iam_role.vertica_instance_role.*.name, [""])[0]
 }
 
 output "security_group_id" {
@@ -46,5 +56,5 @@ output "security_group_id" {
 
 output "cloudformation_stack_name" {
   description = "CF stack name"
-  value       = aws_cloudformation_stack.edw_access.name
+  value       = concat(aws_cloudformation_stack.edw_access.*.name, [""])[0]
 }

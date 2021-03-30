@@ -1,1 +1,8 @@
-- (HEAD -> master, origin/master) first commit (ba80ab1) - Rohit Amarnath
+- (HEAD -> add_readme_and_update_for_publish) add readme (59b3967) - Rohit Amarnath
+- (origin/master, origin/HEAD, master) fmt (05797b0) - eduardolugo
+- adding descriptions (7e7ea6a) - eduardolugo
+- adding cf stack for account access (1dce9c3) - eduardolugo
+- fmt (02dde28) - eduardolugo
+- adding CI and makefile (b81a4e4) - eduardolugo
+- updating resources and outputs (c5744f5) - eduardolugo
+- initial commit (4417338) - eduardolugo
