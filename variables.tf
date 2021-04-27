@@ -29,52 +29,42 @@ variable "edw_principal_account_number" {
 
 variable "sns_topic_arn" {
   description = "SNS for EDW"
+  default     = "*"
 }
 
 variable "remote_logger" {
   description = "EDWs remote logger"
+  default     = "*"
 }
 
-variable "create_backup_bucket" {
+variable "account_configuration" {
+  description = "configuration for fully managed accounts"
+  default     = "semi_managed"
+}
+
+variable "configuration_maps" {
   description = "Eable creation of backup bucket"
-  default     = true
-  type        = bool
-}
-
-variable "create_eon_bucket" {
-  description = "Enable creation of eon bucket"
-  default     = true
-  type        = bool
-}
-
-variable "create_kms_key" {
-  description = "Enable creation of kms key"
-  default     = true
-  type        = bool
-}
-
-variable "create_access_role" {
-  description = "Enable creation of access role"
-  default     = true
-  type        = bool
-}
-
-variable "create_instance_role" {
-  description = "Enable creation of instance role"
-  default     = true
-  type        = bool
-}
-
-variable "create_security_group" {
-  description = "Enable creation of security group"
-  default     = true
-  type        = bool
-}
-
-variable "force_destroy" {
-  description = "Force destroy buckets"
-  default     = false
-  type        = bool
+  type        = map(map(string))
+  default = {
+    "fully_managed" = {
+      "eon_bucket"     = false,
+      "backup_bucket"  = false,
+      "kms_key"        = false,
+      "access_role"    = true,
+      "instance_role"  = false,
+      "security_group" = false,
+      "force_destroy"  = false,
+    }
+    "semi_managed" = {
+      "eon_bucket"     = true,
+      "backup_bucket"  = true,
+      "kms_key"        = true,
+      "access_role"    = true,
+      "instance_role"  = true,
+      "security_group" = true,
+      "force_destroy"  = false,
+    }
+  }
 }
 
 ###SG

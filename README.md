@@ -34,7 +34,101 @@ Review and prepare requirements:
 - Access to EDW resources Terraform Module
 - Access to EDW Cloudformation role template
 
-### Creating Resources for Vertica Cluster
+### Different access levels
+
+#### Fully Managed
+EDW creates and manages all resources. This requires a broader access level to the target account. On this scenario, the module only creates the cross account access role with enough permission to manage all other resources
+
+#### Semi Managed
+You create and manage some of the resources. This requires a thiner access to the target account. On this scenario the module create as much resources as possible upfront and the cross account access role with permissions to access only said resources 
+
+### Creating Resources for Vertica Cluster on a Fully Managed Account
+
+1. Create a terraform script (main.tf) with the following content:
+
+    ```jsx
+    variable "region" {
+      description = "AWS region identifier"
+    }
+
+    variable "environment" {
+      description = "Environment name (e.g.: dev/prod)"
+    }
+
+    variable "prefix" {
+      description = "Prefix for resources (ej:edw/foo)"
+    }
+
+    variable "edw_principal_account_number" {
+      description = "edw main account"
+    }
+
+    provider "aws" {
+      version = "~> 3.0"
+      region  = var.region
+    }
+
+    module "edw_resources" {
+      source                                 = "git@github.com:full360/terraform-aws-edw-prereqs.git"
+      environment = var.environment
+      prefix = var.prefix
+      client_id = var.client_id
+      region  = var.region
+      tags = {
+        "key1" = "value1"
+      }
+      edw_principal_account_number = var.edw_principal_account_number
+      account_configuration = "fully_managed"
+    }
+
+    # outputs
+    output "workspace" {
+      value = terraform.workspace
+    }
+
+    output "module_outputs" {
+      description = "edw module outputs"
+      value       = module.edw_resources
+    }
+    ```
+
+2. Create a tfvars (qa.tfvars) file like this
+
+    ```jsx
+    region = "us-west-2"
+
+    client_id = "123123123123"
+
+    environment = "dev"
+
+    prefix = "vertica"
+
+    client_id = "34A8D475-A10A-4056-B4C1-D5985A110A09"
+
+    edw_principal_account_number = "123456789"
+    ```
+
+3. Create the resources applying the terraform script 
+
+    ```jsx
+    terraform apply -var-file=qa.tfvars
+    ```
+
+4. The script will start creating resources and after a minute or two should generate an output like the following
+
+    ```jsx
+    Outputs:
+
+    module_outputs = {
+      ...
+    }
+    workspace = "default"
+    ```
+
+5. You can go ahead and create everything you need on EDW without any assistance
+6. You also need to check in your accounts CloudFormation for the stack recently created by the module called edw-access-${client_id} for the ARN of the role created in that stack (The reason why this is a CloudFormation stack is to keep it consistent with how the role is maintained across multiple clients, and used)
+
+### Creating Resources for Vertica Cluster on a Semi Managed Account
 
 1. Create a terraform script (main.tf) with the following content:
 
@@ -118,7 +212,7 @@ Review and prepare requirements:
 
     prefix = "vertica"
 
-    client_id = "XXXXXXX"
+    client_id = "XXXX-XXX-XXX-XXX"
 
     remote_logger = "arn:aws:iam::123456789:role/edw-remote-logger"
 
@@ -143,7 +237,7 @@ Review and prepare requirements:
     workspace = "default"
     ```
 
-5. Provide Full 360 receives the outputs
+5. Provide Full 360 the outputs so they can configure your environment as semi managed
 6. You also need to check in your accounts CloudFormation for the stack recently created by the module called edw-access-${client_id} for the ARN of the role created in that stack (The reason why this is a CloudFormation stack is to keep it consistent with how the role is maintained across multiple clients, and used)
 
 # Docs

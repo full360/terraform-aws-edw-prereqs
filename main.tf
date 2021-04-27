@@ -4,6 +4,18 @@ locals {
   eon_bucket_name    = "${local.resource_prefix}-eon-data"
   sg_name            = "${local.resource_prefix}-sg"
   kms_description    = "${local.resource_prefix}-kms-key"
+
+  create_backup_bucket  = var.configuration_maps[var.account_configuration].backup_bucket
+  create_eon_bucket     = var.configuration_maps[var.account_configuration].eon_bucket
+  create_access_role    = var.configuration_maps[var.account_configuration].access_role
+  create_instance_role  = var.configuration_maps[var.account_configuration].instance_role
+  create_kms_key        = var.configuration_maps[var.account_configuration].kms_key
+  create_security_group = var.configuration_maps[var.account_configuration].security_group
+  force_destroy         = var.configuration_maps[var.account_configuration].force_destroy
+
+  create_fm_access_role = local.create_access_role ? var.account_configuration == "fully_managed" ? 1 : 0 : 0
+  create_sm_access_role = local.create_access_role ? var.account_configuration == "semi_managed" ? 1 : 0 : 0
+
 }
 
 
@@ -68,7 +80,7 @@ module "backup_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "v1.9.0"
 
-  create_bucket = var.create_backup_bucket
+  create_bucket = local.create_backup_bucket
   bucket        = local.backup_bucket_name
   acl           = "private"
   tags          = var.tags
@@ -76,7 +88,7 @@ module "backup_bucket" {
 
   # Protect the data vendor bucket from being erased if there's content in the
   # bucket.
-  force_destroy = var.force_destroy
+  force_destroy = local.force_destroy
 
   # Block public access
   block_public_acls       = true
@@ -119,7 +131,7 @@ module "eon_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "v1.9.0"
 
-  create_bucket = var.create_eon_bucket
+  create_bucket = local.create_eon_bucket
   bucket        = local.eon_bucket_name
   acl           = "private"
   tags          = var.tags
@@ -127,7 +139,7 @@ module "eon_bucket" {
 
   # Protect the data vendor bucket from being erased if there's content in the
   # bucket.
-  force_destroy = var.force_destroy
+  force_destroy = local.force_destroy
 
   # Block public access
   block_public_acls       = true
@@ -153,7 +165,7 @@ module "asg_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.6"
 
-  create      = var.create_security_group
+  create      = local.create_security_group
   name        = local.sg_name
   description = "Security Group for ${local.resource_prefix}"
   tags        = var.tags
@@ -172,7 +184,7 @@ module "asg_sg" {
 
 
 resource "aws_kms_key" "vertica_kms_key" {
-  count                   = var.create_kms_key ? 1 : 0
+  count                   = local.create_kms_key ? 1 : 0
   description             = local.kms_description
   deletion_window_in_days = 7
   tags                    = var.tags
@@ -180,7 +192,7 @@ resource "aws_kms_key" "vertica_kms_key" {
 
 
 data "template_file" "vertica_instance_role_tpl" {
-  count    = var.create_instance_role ? 1 : 0
+  count    = local.create_instance_role ? 1 : 0
   template = file("${path.module}/templates/vertica-instance-role.tpl")
 
   vars = {
@@ -206,7 +218,7 @@ data "template_file" "vertica_instance_role_tpl" {
 # Attaching the policy File to the Role
 #=======================================#
 resource "aws_iam_policy" "vertica_instance_policy" {
-  count  = var.create_instance_role ? 1 : 0
+  count  = local.create_instance_role ? 1 : 0
   name   = "${local.resource_prefix}-instance-policy"
   policy = data.template_file.vertica_instance_role_tpl[0].rendered
 }
@@ -215,7 +227,7 @@ resource "aws_iam_policy" "vertica_instance_policy" {
 # Create Instance role
 #==========================#
 resource "aws_iam_role" "vertica_instance_role" {
-  count       = var.create_instance_role ? 1 : 0
+  count       = local.create_instance_role ? 1 : 0
   name        = "${local.resource_prefix}-instance-role"
   path        = var.role_path
   description = "Role to be Assumed by EC2 Instances"
@@ -245,7 +257,7 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "vertica_instance_role_policy_attach-1" {
-  count      = var.create_instance_role ? 1 : 0
+  count      = local.create_instance_role ? 1 : 0
   name       = "${local.resource_prefix}-instance-role-policy-attach"
   roles      = [aws_iam_role.vertica_instance_role[0].name]
   policy_arn = aws_iam_policy.vertica_instance_policy[0].arn
@@ -255,7 +267,7 @@ resource "aws_iam_policy_attachment" "vertica_instance_role_policy_attach-1" {
 # Create a Instance Profile with the above Created role
 #========================================================#
 resource "aws_iam_instance_profile" "vertica_instance_profile" {
-  count       = var.create_instance_role ? 1 : 0
+  count       = local.create_instance_role ? 1 : 0
   name_prefix = local.resource_prefix
   role        = aws_iam_role.vertica_instance_role[0].name
 }
@@ -265,8 +277,8 @@ resource "aws_iam_instance_profile" "vertica_instance_profile" {
 # ======================
 
 resource "aws_cloudformation_stack" "edw_access" {
-  count = var.create_access_role ? 1 : 0
-  name  = "edw-access-${var.client_id}"
+  count = local.create_sm_access_role
+  name  = "edw-access-${local.resource_prefix}-${var.client_id}"
 
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
 
@@ -283,5 +295,19 @@ resource "aws_cloudformation_stack" "edw_access" {
     EDWPrincipalAWSAcctId = var.edw_principal_account_number
   }
 
-  template_body = file("${path.module}/templates/role_template.yml")
+  template_body = file("${path.module}/templates/sm_role_template.yml")
+}
+
+resource "aws_cloudformation_stack" "edw_fm_access" {
+  count = local.create_fm_access_role
+  name  = "edw-access-${local.resource_prefix}-${var.client_id}"
+
+  capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
+
+  parameters = {
+    ClientId              = var.client_id
+    EDWPrincipalAWSAcctId = var.edw_principal_account_number
+  }
+
+  template_body = file("${path.module}/templates/fm_role_template.yml")
 }

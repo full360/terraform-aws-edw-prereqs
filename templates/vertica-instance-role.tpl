@@ -194,6 +194,12 @@
 			]
 		},
 		{
+			"Sid": "MonitorMetricsAndAlarm",
+			"Effect": "Allow",
+			"Action": "cloudwatch:PutMetricData",
+			"Resource": "*"
+		},
+		{
 			"Sid": "ProvideAccessToPublishMessagesToSNS",
 			"Effect": "Allow",
 			"Action": "sns:Publish",
