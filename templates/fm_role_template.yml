@@ -387,6 +387,13 @@ Resources:
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-vertica-seconday-admin-password
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-vertika-configuration
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-scale-in-protection
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-ldap-server
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-ldap-base-domain-component
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-ldap-group-domain-component
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-user-name
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-user-password
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-filter-group
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${EDWPrefix}-*-ad-email-suffix
         - PolicyName: "edw-route53"
           PolicyDocument:
             Version: 2012-10-17
