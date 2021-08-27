@@ -1,7 +1,8 @@
 locals {
   resource_prefix    = "${var.prefix}-${var.environment}"
-  backup_bucket_name = "${local.resource_prefix}-backup-data"
-  eon_bucket_name    = "${local.resource_prefix}-eon-data"
+  backup_bucket_name = length(var.custom_backup_bucket_name) > 0 ? var.custom_backup_bucket_name : "${local.resource_prefix}-backup-data"
+  eon_bucket_name    = length(var.custom_eon_bucket_name) > 0 ? var.custom_eon_bucket_name : "${local.resource_prefix}-eon-data"
+  cf_stack_name      = length(var.custom_cf_name) > 0 ? var.custom_cf_name : "edw-access-${local.resource_prefix}-${var.client_id}"
   sg_name            = "${local.resource_prefix}-sg"
   kms_description    = "${local.resource_prefix}-kms-key"
 
@@ -19,8 +20,7 @@ locals {
 }
 
 
-data "aws_caller_identity" "current" {
-}
+data "aws_caller_identity" "current" {}
 
 
 data "aws_iam_policy_document" "secure_access_backup" {
@@ -278,7 +278,7 @@ resource "aws_iam_instance_profile" "vertica_instance_profile" {
 
 resource "aws_cloudformation_stack" "edw_access" {
   count = local.create_sm_access_role
-  name  = "edw-access-${local.resource_prefix}-${var.client_id}"
+  name  = local.cf_stack_name
 
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
 
