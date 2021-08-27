@@ -274,3 +274,23 @@ variable "tags" {
   description = "tags to be applied to the resources created"
   type        = map(string)
 }
+
+variable "custom_backup_bucket_name" {
+  description = "custom name for backup bucket"
+  type        = string
+  default     = ""
+}
+
+variable "custom_eon_bucket_name" {
+  description = "custom name for backup bucket"
+  type        = string
+  default     = ""
+}
+
+variable "custom_cf_name" {
+  description = "custom name for backup bucket"
+  type        = string
+  default     = ""
+}
+
+
