@@ -63,3 +63,7 @@ output "cloudformation_fm_stack_name" {
   description = "CF stack name"
   value       = concat(aws_cloudformation_stack.edw_fm_access.*.name, [""])[0]
 }
+
+output "role_arn" {
+  value = aws_cloudformation_stack.edw_access.outputs.EdwRoleARN
+}
