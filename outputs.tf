@@ -65,5 +65,6 @@ output "cloudformation_fm_stack_name" {
 }
 
 output "role_arn" {
-  value = aws_cloudformation_stack.edw_access.outputs.EdwRoleARN
+  description = "role arn"
+  value       = concat(aws_cloudformation_stack.edw_access.*.outputs.EdwRoleARN, [""])[0]
 }
