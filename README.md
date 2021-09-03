@@ -20,19 +20,20 @@ Variables for customization are available. Please check [variables.tf](variables
 
 * Cloudwatch logs groups are not resources managed by EDW so they get created as soon as logs are sent to CloudWatch, because of this the log groups do not have tags, and the naming of the groups depends on random ids generated on cluster creation, which makes it dificult to scope the policy. That is why the policy only allows for create and put logs. It does not allow deletion.
 
-
-## How to use the module
+## Installation
 
 ### Requirements
 
 Review and prepare requirements:
 
-- Terraform
-- AWS CLI
-- EDW ClientId
-- Access to target AWS account
+- [Terraform](https://www.terraform.io/) for version please refer [version.tf](https://github.com/full360/terraform-aws-edw-prereqs/blob/master/versions.tf) file for the terraform version
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [EDW ClientId](https://www.elasticdw.com/documentation/ui/console/)
+- Access to target AWS account ID
 - Access to EDW resources Terraform Module
 - Access to EDW Cloudformation role template
+
+## How to use the module
 
 ### Different access levels
 
@@ -212,7 +213,7 @@ You create and manage some of the resources. This requires a thiner access to th
 
     prefix = "vertica"
 
-    client_id = "XXXX-XXX-XXX-XXX"
+    client_id = "34A8D475-A10A-4056-B4C1-D5985A110A09"
 
     remote_logger = "arn:aws:iam::123456789:role/edw-remote-logger"
 
