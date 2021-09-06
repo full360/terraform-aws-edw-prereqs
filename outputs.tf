@@ -68,3 +68,8 @@ output "role_arn" {
   description = "role arn"
   value       = concat(aws_cloudformation_stack.edw_access.*.outputs.EdwRoleARN, [""])[0]
 }
+
+output "role_fm_arn" {
+  description = "role fm arn"
+  value       = concat(aws_cloudformation_stack.edw_fm_access.*.outputs.EdwRoleARN, [""])[0]
+}
