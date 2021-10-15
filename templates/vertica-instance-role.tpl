@@ -151,6 +151,23 @@
 			}
 		},
 		{
+			"Sid": "s3hooks",
+			"Effect": "Allow",
+			"Action": [
+				"s3:DeleteObject",
+				"s3:GetBucketLocation",
+				"s3:GetObject",
+				"s3:ListBucket",
+				"s3:PutObject"
+			],
+			"Resource": "*",
+			"Condition": {
+				"ForAllValues:StringEquals": {
+					"aws:ResourceTag/common_identifier": "${standard_resource_name}"
+				}
+			}
+		},
+		{
 			"Sid": "FullAccessToBackupBucketAndEONModeDataBucket",
 			"Effect": "Allow",
 			"Action": "s3:*Object",
