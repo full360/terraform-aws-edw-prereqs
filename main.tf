@@ -107,7 +107,7 @@ module "backup_bucket" {
 
   lifecycle_rule = [
     {
-      id                                     = "archive-and-delete-data"
+      id                                     = "archive-data"
       enabled                                = true
       abort_incomplete_multipart_upload_days = 7
 
@@ -117,10 +117,6 @@ module "backup_bucket" {
           storage_class = "STANDARD_IA"
         },
       ]
-
-      expiration = {
-        days = 0
-      }
     },
   ]
 }
