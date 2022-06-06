@@ -16,12 +16,10 @@ locals {
 
   create_fm_access_role = local.create_access_role ? var.account_configuration == "fully_managed" ? 1 : 0 : 0
   create_sm_access_role = local.create_access_role ? var.account_configuration == "semi_managed" ? 1 : 0 : 0
-
 }
 
 
 data "aws_caller_identity" "current" {}
-
 
 data "aws_iam_policy_document" "secure_access_backup" {
 
@@ -121,7 +119,7 @@ module "backup_bucket" {
       ]
 
       expiration = {
-        days = 180
+        days = 0
       }
     },
   ]
@@ -215,6 +213,7 @@ data "template_file" "vertica_instance_role_tpl" {
 }
 
 
+# ======================
 # Attaching the policy File to the Role
 #=======================================#
 resource "aws_iam_policy" "vertica_instance_policy" {
@@ -224,6 +223,7 @@ resource "aws_iam_policy" "vertica_instance_policy" {
 }
 
 
+# ======================
 # Create Instance role
 #==========================#
 resource "aws_iam_role" "vertica_instance_role" {
@@ -264,6 +264,7 @@ resource "aws_iam_policy_attachment" "vertica_instance_role_policy_attach-1" {
 }
 
 
+# =======================================================#
 # Create a Instance Profile with the above Created role
 #========================================================#
 resource "aws_iam_instance_profile" "vertica_instance_profile" {
@@ -273,9 +274,9 @@ resource "aws_iam_instance_profile" "vertica_instance_profile" {
 }
 
 
+# ======================
 # Create edw access role
 # ======================
-
 resource "aws_cloudformation_stack" "edw_access" {
   count = local.create_sm_access_role
   name  = local.cf_stack_name
